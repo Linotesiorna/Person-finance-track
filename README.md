@@ -3,7 +3,7 @@
 A simple web-based Personal Finance Tracker with User and Admin roles. 
 ---
 
-## Features
+## Features to be added Soon
 
 ### User Role
 - **Sign Up**: Users can register with a username and password.
