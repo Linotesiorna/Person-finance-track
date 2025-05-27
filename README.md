@@ -1,4 +1,4 @@
-# Personal Finance Tracker
+# Personal Finance Tracker V2
 
 A simple web-based Personal Finance Tracker with User and Admin roles. 
 ---
