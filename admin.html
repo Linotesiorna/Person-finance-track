@@ -4,8 +4,12 @@
 <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Personal Finance Tracker</title>
+        <title>Admin Dashboard - Personal Finance Tracker</title>
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/2.1.2/sweetalert.min.js"></script>
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
         <style>
                 * {
                         margin: 0;
@@ -301,7 +305,7 @@
                                 <i class="fas fa-shield-alt"></i>
                                 Admin Dashboard
                         </h1>
-                        <button class="btn btn-logout">
+                        <button class="btn btn-logout" onclick="logout()">
                                 <i class="fas fa-sign-out-alt"></i>
                                 Logout
                         </button>
@@ -320,6 +324,233 @@
                         </ul>
                 </div>
         </div>
+        <script>
+                const API_BASE = ' https://c3e5-2001-fd8-2643-60a0-ddf2-62c7-c35-d923.ngrok-free.app/api'; // Change if using ngrok
+
+                // Set custom header globally for all Axios requests
+                axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
+
+                const userId = localStorage.getItem('userId');
+                const role = localStorage.getItem('role');
+
+                // Redirect if not authorized
+                if (!userId || role !== 'admin') {
+                        Swal.fire({
+                                title: "Unauthorized Access!",
+                                text: "You don't have permission to access this page. Redirecting to login.",
+                                icon: "error",
+                                confirmButtonColor: "#f44336",
+                                background: "#000",
+                                color: "#fff",
+                        }).then(() => {
+                                window.location.href = 'index.html';
+                        });
+                }
+
+                // Logout function
+                function logout() {
+                        Swal.fire({
+                                title: "Logout Confirmation",
+                                text: "Are you sure you want to logout?",
+                                icon: "warning",
+                                background: "#000",
+                                color: "#fff",
+                                showCancelButton: true,
+                                confirmButtonColor: "#d33",
+                                cancelButtonColor: "#4CAF50",
+                                confirmButtonText: "Logout",
+                        }).then((result) => {
+                                if (result.isConfirmed) {
+                                        localStorage.clear();
+                                        Swal.fire({
+                                                title: "Logged out successfully!",
+                                                icon: "success",
+                                                background: "#000",
+                                                color: "#fff",
+                                        }).then(() => {
+                                                window.location.href = 'index.html';
+                                        });
+                                }
+                        });
+                }
+
+                // Fetch and display users
+                function fetchUsers() {
+                        axios.get(`${API_BASE}/users`)
+                                .then(res => {
+                                        const list = document.getElementById('usersList');
+                                        list.innerHTML = '';
+
+                                        if (res.data.length === 0) {
+                                                list.innerHTML = `
+            <div class="no-users">
+              <i class="fas fa-user-slash" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+              No users found.
+            </div>`;
+                                                return;
+                                        }
+
+                                        res.data.forEach(user => {
+                                                const li = document.createElement('li');
+                                                li.className = 'user-item';
+
+                                                const roleClass = user.role === 'admin' ? 'role-admin' : 'role-user';
+
+                                                li.innerHTML = `
+            <div class="user-info">
+              <div class="user-details">
+                <div class="user-id">ID: ${user.id}</div>
+                <div class="user-name"><i class="fas fa-user"></i> ${user.username}</div>
+                <span class="user-role ${roleClass}">${user.role}</span>
+              </div>
+              <div class="user-actions">
+                <button class="btn btn-view" onclick="viewTransactions(${user.id})">
+                  <i class="fas fa-eye"></i> View Transactions
+                </button>
+                <button class="btn btn-delete" ${user.username === 'admin' ? 'disabled' : ''} onclick="deleteUser(${user.id})">
+                  <i class="fas fa-trash"></i> Delete User
+                </button>
+              </div>
+            </div>`;
+
+                                                list.appendChild(li);
+                                        });
+                                })
+                                .catch(err => {
+                                        Swal.fire({
+                                                title: "Error Loading Users",
+                                                text: `Failed to load users: ${err.message}`,
+                                                icon: "error",
+                                                background: "#000",
+                                                color: "#fff",
+                                                confirmButtonColor: "#f44336",
+                                        });
+                                });
+                }
+
+                // Delete a user
+                function deleteUser(id) {
+                        Swal.fire({
+                                title: "Delete User",
+                                text: "Delete this user? All their transactions will be deleted! This action cannot be undone.",
+                                icon: "warning",
+                                background: "#000",
+                                color: "#fff",
+                                showCancelButton: true,
+                                confirmButtonColor: "#d33",
+                                cancelButtonColor: "#4CAF50",
+                                confirmButtonText: "Delete",
+                        }).then((result) => {
+                                if (result.isConfirmed) {
+                                        axios.delete(`${API_BASE}/users/${id}`)
+                                                .then(() => {
+                                                        Swal.fire({
+                                                                title: "User deleted successfully!",
+                                                                icon: "success",
+                                                                background: "#000",
+                                                                color: "#fff",
+                                                                confirmButtonColor: "#4CAF50",
+                                                        });
+                                                        fetchUsers();
+                                                })
+                                                .catch(err => {
+                                                        Swal.fire({
+                                                                title: "Error Deleting User",
+                                                                text: `Failed to delete user: ${err.message}`,
+                                                                icon: "error",
+                                                                background: "#000",
+                                                                color: "#fff",
+                                                                confirmButtonColor: "#f44336",
+                                                        });
+                                                });
+                                }
+                        });
+                }
+
+                // View transactions in a table
+                function viewTransactions(userId) {
+                        Swal.fire({
+                                title: "Loading Transactions...",
+                                text: "Please wait while we fetch the transaction data.",
+                                icon: "info",
+                                background: "#000",
+                                color: "#fff",
+                                allowOutsideClick: false,
+                                allowEscapeKey: false,
+                                showConfirmButton: false,
+                        });
+
+                        axios.get(`${API_BASE}/transactions/${userId}`)
+                                .then(res => {
+                                        if (res.data.length === 0) {
+                                                return Swal.fire({
+                                                        title: "No Transactions",
+                                                        text: "No transactions found for this user.",
+                                                        icon: "info",
+                                                        background: "#000",
+                                                        color: "#fff",
+                                                        confirmButtonColor: "#4CAF50",
+                                                });
+                                        }
+
+                                        let tableHTML = `
+          <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse: collapse; color: white;">
+            <thead>
+              <tr style="background-color: #222;">
+                <th style="border: 1px solid #444; padding: 8px;">Date</th>
+                <th style="border: 1px solid #444; padding: 8px;">Description</th>
+                <th style="border: 1px solid #444; padding: 8px;">Type</th>
+                <th style="border: 1px solid #444; padding: 8px;">Amount (₱)</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+                                        res.data.forEach(tx => {
+                                                const date = new Date(tx.date).toLocaleString();
+                                                const description = tx.description || '';
+                                                const type = tx.type || '';
+                                                const amount = isNaN(Number(tx.amount)) ? '₱0.00' : `₱${Number(tx.amount).toFixed(2)}`;
+
+                                                tableHTML += `
+            <tr>
+              <td style="border: 1px solid #444; padding: 8px;">${date}</td>
+              <td style="border: 1px solid #444; padding: 8px;">${description}</td>
+              <td style="border: 1px solid #444; padding: 8px;">${type}</td>
+              <td style="border: 1px solid #444; padding: 8px;">${amount}</td>
+            </tr>`;
+                                        });
+
+                                        tableHTML += `</tbody></table></div>`;
+
+                                        Swal.fire({
+                                                title: 'User Transactions',
+                                                html: tableHTML,
+                                                icon: 'success',
+                                                background: '#000',
+                                                color: '#fff',
+                                                width: '90%',
+                                                confirmButtonColor: "#4CAF50",
+                                                confirmButtonText: "Close",
+                                        });
+                                })
+                                .catch(err => {
+                                        Swal.fire({
+                                                title: "Error Loading Transactions",
+                                                text: `Failed to load transactions: ${err.message}`,
+                                                icon: "error",
+                                                background: "#000",
+                                                color: "#fff",
+                                                confirmButtonColor: "#f44336",
+                                        });
+                                });
+                }
+
+                // Initialize dashboard
+                fetchUsers();
+        </script>
+
 </body>
 
 </html>
