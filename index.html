@@ -4,7 +4,9 @@
 <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title> Login Personal Finance Tracker</title>
+        <title>Login - Personal Finance Tracker</title>
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
         <style>
                 * {
@@ -15,12 +17,12 @@
 
                 body {
                         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                        background: linear-gradient(135deg, #180d0d 0%, #1a1a1a 50%, #2d2d2d 100%);
+                        background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #2d2d2d 100%);
                         min-height: 100vh;
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        color: #cf8f8f;
+                        color: #ffffff;
                         overflow-x: hidden;
                 }
 
@@ -210,7 +212,7 @@
                 .divider span {
                         background: rgba(30, 30, 30, 0.95);
                         padding: 0 20px;
-                        color: #5f9ff1;
+                        color: #a0aec0;
                         font-size: 0.9rem;
                         position: relative;
                 }
@@ -360,7 +362,8 @@
                                                 <div class="input-wrapper">
                                                         <input type="password" id="password" required
                                                                 placeholder="Enter your password" />
-                                                        <button type="button" class="password-toggle">
+                                                        <button type="button" class="password-toggle"
+                                                                onclick="togglePassword('password')">
                                                                 <i class="fas fa-eye" id="password-eye"></i>
                                                         </button>
                                                 </div>
@@ -396,7 +399,215 @@
                         </div>
                 </div>
         </div>
-</body>
 
+        <script>
+
+                const API_BASE = ' https://c3e5-2001-fd8-2643-60a0-ddf2-62c7-c35-d923.ngrok-free.app/api'; // Change if using ngrok
+
+                // Set custom header globally for all Axios requests
+                axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
+
+                // Custom SweetAlert2 configuration for dark theme
+                const swalDark = Swal.mixin({
+                        customClass: {
+                                popup: 'swal2-dark',
+                                title: 'swal2-title-dark',
+                                content: 'swal2-content-dark'
+                        },
+                        background: 'rgba(30, 30, 30, 0.95)',
+                        color: '#ffffff'
+                });
+
+                async function checkServerConnection() {
+                        try {
+                                // Try a simple GET request to your API root or a lightweight endpoint
+                                await axios.get(API_BASE + '/health'); // or '/' or any lightweight endpoint you have
+
+                                // If successful, no alert needed
+                                console.log('Server is reachable.');
+                        } catch (err) {
+                                if (!err.response) {
+                                        // No response means server not reachable
+                                        await swalDark.fire({
+                                                icon: 'error',
+                                                title: 'Server Not Connected',
+                                                text: 'Cannot reach the server. Please check your internet connection or try again later.',
+                                                confirmButtonText: 'OK'
+                                        });
+                                } else {
+                                        // Some other error, optional to handle here
+                                        console.error('Error connecting to server:', err.message);
+                                }
+                        }
+                }
+
+                // Run the check when the page loads
+                window.addEventListener('load', checkServerConnection);
+
+                // Create Account Modal
+                document.getElementById('createAccountBtn').onclick = async () => {
+                        const { value: formValues } = await swalDark.fire({
+                                title: '<i class="fas fa-user-plus"></i> Create New Account',
+                                html: `
+          <div style="text-align: left; margin-top: 20px;">
+            <div style="margin-bottom: 20px;">
+              <label style="display: block; margin-bottom: 8px; color: #e2e8f0; font-weight: 500;">
+                <i class="fas fa-user"></i> Username
+              </label>
+              <input id="swal-username" class="swal2-input" placeholder="Choose a username" style="margin: 0; width: 100%;">
+            </div>
+            <div style="margin-bottom: 10px;">
+              <label style="display: block; margin-bottom: 8px; color: #e2e8f0; font-weight: 500;">
+                <i class="fas fa-lock"></i> Password
+              </label>
+              <div style="position: relative;">
+                <input id="swal-password" type="password" class="swal2-input" placeholder="Create a password" style="margin: 0; width: 100%; padding-right: 45px;">
+                <button type="button" onclick="toggleModalPassword()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #a0aec0; cursor: pointer; font-size: 1rem; padding: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
+                  <i class="fas fa-eye" id="modal-password-eye"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `,
+                                showCancelButton: true,
+                                confirmButtonText: '<i class="fas fa-user-plus"></i> Create Account',
+                                cancelButtonText: 'Cancel',
+                                width: '400px',
+                                preConfirm: () => {
+                                        const username = document.getElementById('swal-username').value.trim();
+                                        const password = document.getElementById('swal-password').value.trim();
+
+                                        if (!username || !password) {
+                                                Swal.showValidationMessage('Please fill in all fields');
+                                                return false;
+                                        }
+
+                                        if (username.length < 3) {
+                                                Swal.showValidationMessage('Username must be at least 3 characters long');
+                                                return false;
+                                        }
+
+                                        if (password.length < 3) {
+                                                Swal.showValidationMessage('Password must be at least 3 characters long');
+                                                return false;
+                                        }
+
+                                        return { username, password };
+                                }
+                        });
+
+                        if (formValues) {
+                                // Show loading
+                                swalDark.fire({
+                                        title: 'Creating Account...',
+                                        allowOutsideClick: false,
+                                        didOpen: () => {
+                                                Swal.showLoading();
+                                        }
+                                });
+
+                                try {
+                                        await axios.post(API_BASE + '/signup', {
+                                                username: formValues.username,
+                                                password: formValues.password,
+                                                role: 'user'
+                                        });
+
+                                        await swalDark.fire({
+                                                icon: 'success',
+                                                title: 'Account Created!',
+                                                text: 'Your account has been created successfully. You can now login.',
+                                                confirmButtonText: 'Got it!'
+                                        });
+                                } catch (err) {
+                                        await swalDark.fire({
+                                                icon: 'error',
+                                                title: 'Signup Failed',
+                                                text: err.response?.data?.message || err.message,
+                                                confirmButtonText: 'Try Again'
+                                        });
+                                }
+                        }
+                };
+
+                // Toggle password visibility
+                function togglePassword(inputId) {
+                        const passwordInput = document.getElementById(inputId);
+                        const eyeIcon = document.getElementById(inputId + '-eye');
+
+                        if (passwordInput.type === 'password') {
+                                passwordInput.type = 'text';
+                                eyeIcon.classList.remove('fa-eye');
+                                eyeIcon.classList.add('fa-eye-slash');
+                        } else {
+                                passwordInput.type = 'password';
+                                eyeIcon.classList.remove('fa-eye-slash');
+                                eyeIcon.classList.add('fa-eye');
+                        }
+                }
+
+                // Toggle password visibility in modal
+                function toggleModalPassword() {
+                        const passwordInput = document.getElementById('swal-password');
+                        const eyeIcon = document.getElementById('modal-password-eye');
+
+                        if (passwordInput && eyeIcon) {
+                                if (passwordInput.type === 'password') {
+                                        passwordInput.type = 'text';
+                                        eyeIcon.classList.remove('fa-eye');
+                                        eyeIcon.classList.add('fa-eye-slash');
+                                } else {
+                                        passwordInput.type = 'password';
+                                        eyeIcon.classList.remove('fa-eye-slash');
+                                        eyeIcon.classList.add('fa-eye');
+                                }
+                        }
+                }
+
+                // Login
+                document.getElementById('loginForm').onsubmit = async (e) => {
+                        e.preventDefault();
+                        const username = document.getElementById('username').value.trim();
+                        const password = document.getElementById('password').value.trim();
+                        const role = document.getElementById('role').value;
+
+                        // Add loading state
+                        const form = e.target;
+                        form.classList.add('loading');
+
+                        try {
+                                const res = await axios.post(API_BASE + '/login', { username, password, role });
+
+                                await swalDark.fire({
+                                        icon: 'success',
+                                        title: 'Login Successful!',
+                                        text: 'Welcome back to your finance tracker',
+                                        timer: 1500,
+                                        showConfirmButton: false
+                                });
+
+                                // Save user info to localStorage for session simulation
+                                localStorage.setItem('userId', res.data.id);
+                                localStorage.setItem('username', res.data.username);
+                                localStorage.setItem('role', res.data.role);
+
+                                // Redirect based on role
+                                if (role === 'admin') {
+                                        window.location.href = 'admin.html';
+                                } else {
+                                        window.location.href = 'user.html';
+                                }
+                        } catch (err) {
+                                form.classList.remove('loading');
+                                await swalDark.fire({
+                                        icon: 'error',
+                                        title: 'Login Failed',
+                                        text: err.response?.data?.message || err.message,
+                                        confirmButtonText: 'Try Again'
+                                });
+                        }
+                };
+        </script>
+</body>
 
 </html>
