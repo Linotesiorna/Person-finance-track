@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Personal Finance Dashboard</title>
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+        <style>
+                * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                }
+
+                :root {
+                        --bg-primary: #0f172a;
+                        --bg-secondary: #1e293b;
+                        --bg-tertiary: #334155;
+                        --text-primary: #f8fafc;
+                        --text-secondary: #cbd5e1;
+                        --text-muted: #64748b;
+                        --accent-primary: #3b82f6;
+                        --accent-secondary: #8b5cf6;
+                        --success: #10b981;
+                        --danger: #ef4444;
+                        --warning: #f59e0b;
+                        --border: #475569;
+                        --shadow: rgba(0, 0, 0, 0.3);
+                }
+
+                body {
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        background: linear-gradient(135deg, var(--bg-primary) 0%, #1a2332 100%);
+                        color: var(--text-primary);
+                        min-height: 100vh;
+                        line-height: 1.6;
+                }
+
+                .container {
+                        max-width: 1400px;
+                        margin: 0 auto;
+                        padding: 2rem;
+                }
+
+                .header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 3rem;
+                        padding-bottom: 1.5rem;
+                        border-bottom: 1px solid var(--border);
+                }
+
+                .header h1 {
+                        font-size: 2.5rem;
+                        font-weight: 700;
+                        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+                        -webkit-background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        background-clip: text;
+                }
+
+                .logout-btn {
+                        background: linear-gradient(135deg, var(--danger), #dc2626);
+                        color: white;
+                        border: none;
+                        padding: 0.75rem 1.5rem;
+                        border-radius: 0.75rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+                }
+
+                .logout-btn:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+                }
+
+                .dashboard-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 2rem;
+                        margin-bottom: 3rem;
+                }
+
+                .stats-cards {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                        gap: 1.5rem;
+                        margin-bottom: 3rem;
+                }
+
+                .stat-card {
+                        background: var(--bg-secondary);
+                        border: 1px solid var(--border);
+                        border-radius: 1rem;
+                        padding: 2rem;
+                        text-align: center;
+                        transition: transform 0.3s ease, box-shadow 0.3s ease;
+                        backdrop-filter: blur(10px);
+                }
+
+                .stat-card:hover {
+                        transform: translateY(-5px);
+                        box-shadow: 0 20px 40px var(--shadow);
+                }
+
+                .stat-card .icon {
+                        font-size: 2.5rem;
+                        margin-bottom: 1rem;
+                        opacity: 0.8;
+                }
+
+                .stat-card.income .icon {
+                        color: var(--success);
+                }
+
+                .stat-card.expense .icon {
+                        color: var(--danger);
+                }
+
+                .stat-card.balance .icon {
+                        color: var(--accent-primary);
+                }
+
+                .stat-card h3 {
+                        font-size: 0.875rem;
+                        color: var(--text-muted);
+                        margin-bottom: 0.5rem;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                }
+
+                .stat-card .amount {
+                        font-size: 2rem;
+                        font-weight: 700;
+                        color: var(--text-primary);
+                }
+
+                .card {
+                        background: var(--bg-secondary);
+                        border: 1px solid var(--border);
+                        border-radius: 1rem;
+                        padding: 2rem;
+                        backdrop-filter: blur(10px);
+                        box-shadow: 0 10px 30px var(--shadow);
+                }
+
+                .card h2 {
+                        font-size: 1.5rem;
+                        margin-bottom: 1.5rem;
+                        color: var(--text-primary);
+                        display: flex;
+                        align-items: center;
+                        gap: 0.75rem;
+                }
+
+                .form-group {
+                        margin-bottom: 1.5rem;
+                }
+
+                .form-group label {
+                        display: block;
+                        margin-bottom: 0.5rem;
+                        color: var(--text-secondary);
+                        font-weight: 500;
+                }
+
+                .form-control {
+                        width: 100%;
+                        padding: 0.875rem 1rem;
+                        background: var(--bg-tertiary);
+                        border: 1px solid var(--border);
+                        border-radius: 0.5rem;
+                        color: var(--text-primary);
+                        font-size: 1rem;
+                        transition: all 0.3s ease;
+                }
+
+                .form-control:focus {
+                        outline: none;
+                        border-color: var(--accent-primary);
+                        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+                }
+
+                .btn-primary {
+                        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+                        color: white;
+                        border: none;
+                        padding: 0.875rem 2rem;
+                        border-radius: 0.75rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+                        width: 100%;
+                }
+
+                .btn-primary:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+                }
+
+                .transactions-list {
+                        max-height: 400px;
+                        overflow-y: auto;
+                }
+
+                .transaction-item {
+                        background: var(--bg-tertiary);
+                        border: 1px solid var(--border);
+                        border-radius: 0.75rem;
+                        padding: 1.25rem;
+                        margin-bottom: 1rem;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        transition: all 0.3s ease;
+                }
+
+                .transaction-item:hover {
+                        transform: translateX(5px);
+                        border-color: var(--accent-primary);
+                }
+
+                .transaction-info {
+                        flex: 1;
+                }
+
+                .transaction-description {
+                        font-weight: 600;
+                        color: var(--text-primary);
+                        margin-bottom: 0.25rem;
+                }
+
+                .transaction-meta {
+                        font-size: 0.875rem;
+                        color: var(--text-muted);
+                }
+
+                .transaction-amount {
+                        font-weight: 700;
+                        font-size: 1.125rem;
+                        margin-right: 1rem;
+                }
+
+                .transaction-amount.income {
+                        color: var(--success);
+                }
+
+                .transaction-amount.expense {
+                        color: var(--danger);
+                }
+
+                .btn-delete {
+                        background: var(--danger);
+                        color: white;
+                        border: none;
+                        padding: 0.5rem 1rem;
+                        border-radius: 0.5rem;
+                        cursor: pointer;
+                        font-size: 0.875rem;
+                        transition: all 0.3s ease;
+                }
+
+                .btn-delete:hover {
+                        background: #dc2626;
+                        transform: scale(1.05);
+                }
+
+                .chart-container {
+                        position: relative;
+                        height: 300px;
+                        margin-top: 1rem;
+                }
+
+                .empty-state {
+                        text-align: center;
+                        padding: 3rem;
+                        color: var(--text-muted);
+                }
+
+                .empty-state i {
+                        font-size: 4rem;
+                        margin-bottom: 1rem;
+                        opacity: 0.5;
+                }
+
+                @media (max-width: 768px) {
+                        .dashboard-grid {
+                                grid-template-columns: 1fr;
+                        }
+
+                        .stats-cards {
+                                grid-template-columns: 1fr;
+                        }
+
+                        .header {
+                                flex-direction: column;
+                                gap: 1rem;
+                                text-align: center;
+                        }
+
+                        .transaction-item {
+                                flex-direction: column;
+                                align-items: flex-start;
+                                gap: 1rem;
+                        }
+
+                        .transaction-amount {
+                                margin-right: 0;
+                        }
+                }
+
+                /* Custom scrollbar */
+                .transactions-list::-webkit-scrollbar {
+                        width: 6px;
+                }
+
+                .transactions-list::-webkit-scrollbar-track {
+                        background: var(--bg-tertiary);
+                        border-radius: 3px;
+                }
+
+                .transactions-list::-webkit-scrollbar-thumb {
+                        background: var(--accent-primary);
+                        border-radius: 3px;
+                }
+
+                /* SweetAlert2 custom styling */
+                .swal2-popup {
+                        background: var(--bg-secondary) !important;
+                        color: var(--text-primary) !important;
+                        border: 1px solid var(--border) !important;
+                }
+
+                .swal2-title {
+                        color: var(--text-primary) !important;
+                }
+
+                .swal2-content {
+                        color: var(--text-secondary) !important;
+                }
+
+                .swal2-confirm {
+                        background: var(--accent-primary) !important;
+                }
+
+                .swal2-cancel {
+                        background: var(--danger) !important;
+                }
+        </style>
+</head>
+
+<body>
+        <div class="container">
+                <header class="header">
+                        <h1><i class="fas fa-chart-line"></i> Finance Dashboard</h1>
+                        <button class="logout-btn" onclick="logout()">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                </header>
+
+                <div class="stats-cards">
+                        <div class="stat-card income">
+                                <div class="icon"><i class="fas fa-arrow-up"></i></div>
+                                <h3>Total Income</h3>
+                                <div class="amount" id="totalIncome">₱0.00</div>
+                        </div>
+                        <div class="stat-card expense">
+                                <div class="icon"><i class="fas fa-arrow-down"></i></div>
+                                <h3>Total Expenses</h3>
+                                <div class="amount" id="totalExpenses">₱0.00</div>
+                        </div>
+                        <div class="stat-card balance">
+                                <div class="icon"><i class="fas fa-balance-scale"></i></div>
+                                <h3>Net Balance</h3>
+                                <div class="amount" id="netBalance">₱0.00</div>
+                        </div>
+                </div>
+
+                <div class="dashboard-grid">
+                        <div class="card">
+                                <h2><i class="fas fa-chart-pie"></i> Expense Breakdown</h2>
+                                <div class="chart-container">
+                                        <canvas id="expenseChart"></canvas>
+                                </div>
+                        </div>
+
+                        <div class="card">
+                                <h2><i class="fas fa-plus-circle"></i> Add Transaction</h2>
+                                <form id="addTransactionForm">
+                                        <div class="form-group">
+                                                <label for="description">Description</label>
+                                                <input type="text" id="description" class="form-control"
+                                                        placeholder="Enter transaction description" required />
+                                        </div>
+                                        <div class="form-group">
+                                                <label for="amount">Amount</label>
+                                                <input type="number" id="amount" class="form-control" step="0.01"
+                                                        placeholder="0.00" required />
+                                        </div>
+                                        <div class="form-group">
+                                                <label for="type">Type</label>
+                                                <select id="type" class="form-control" required>
+                                                        <option value="">Select type</option>
+                                                        <option value="income">Income</option>
+                                                        <option value="expense">Expense</option>
+                                                </select>
+                                        </div>
+                                        <button type="submit" class="btn-primary">
+                                                <i class="fas fa-plus"></i> Add Transaction
+                                        </button>
+                                </form>
+                        </div>
+                </div>
+
+                <div class="card">
+                        <h2><i class="fas fa-list"></i> Recent Transactions</h2>
+                        <div class="transactions-list" id="transactionsList">
+                                <div class="empty-state">
+                                        <i class="fas fa-receipt"></i>
+                                        <p>No transactions found. Add your first transaction to get started!</p>
+                                </div>
+                        </div>
+                </div>
+        </div>
+
+        <script>
+
+                const API_BASE = 'https://c3e5-2001-fd8-2643-60a0-ddf2-62c7-c35-d923.ngrok-free.app/api'; // Change if using ngrok
+
+                // Set custom header globally for all Axios requests
+                axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
+
+                let transactionsData = [];
+                let expenseChart = null;
+
+                const userId = localStorage.getItem('userId');
+                const role = localStorage.getItem('role');
+
+                if (!userId || role !== 'user') {
+                        Swal.fire({
+                                icon: 'error',
+                                title: 'Unauthorized!',
+                                text: 'Redirecting to login.',
+                                confirmButtonText: 'OK'
+                        }).then(() => {
+                                window.location.href = 'index.html';
+                        });
+                }
+
+                function logout() {
+                        Swal.fire({
+                                title: 'Are you sure you want to log out?',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Yes, log me out',
+                                cancelButtonText: 'Cancel'
+                        }).then((result) => {
+                                if (result.isConfirmed) {
+                                        localStorage.clear();
+                                        window.location.href = 'index.html';
+                                }
+                        });
+                }
+
+
+                function formatCurrency(amount) {
+                        const number = Number(amount);
+                        return `₱${number.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                }
+
+                function updateStats() {
+                        const income = transactionsData
+                                .filter(tx => tx.type === 'income')
+                                .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+                        const expenses = transactionsData
+                                .filter(tx => tx.type === 'expense')
+                                .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+                        const balance = income - expenses;
+
+                        document.getElementById('totalIncome').textContent = formatCurrency(income);
+                        document.getElementById('totalExpenses').textContent = formatCurrency(expenses);
+                        document.getElementById('netBalance').textContent = formatCurrency(balance);
+                }
+
+                function updateChart() {
+                        const ctx = document.getElementById('expenseChart').getContext('2d');
+
+                        if (expenseChart) {
+                                expenseChart.destroy();
+                                expenseChart = null;
+                        }
+
+                        const expenseTransactions = transactionsData.filter(tx => tx.type === 'expense');
+
+                        if (expenseTransactions.length === 0) {
+                                // Show empty chart with message
+                                expenseChart = new Chart(ctx, {
+                                        type: 'doughnut',
+                                        data: {
+                                                labels: ['No expenses yet'],
+                                                datasets: [{
+                                                        data: [100],
+                                                        backgroundColor: ['#475569'],
+                                                        borderWidth: 0,
+                                                        hoverBackgroundColor: ['#475569']
+                                                }]
+                                        },
+                                        options: {
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                cutout: '60%',
+                                                plugins: {
+                                                        legend: {
+                                                                display: true,
+                                                                position: 'bottom',
+                                                                labels: {
+                                                                        color: '#cbd5e1',
+                                                                        padding: 20,
+                                                                        font: {
+                                                                                size: 12
+                                                                        }
+                                                                }
+                                                        },
+                                                        tooltip: {
+                                                                enabled: false
+                                                        }
+                                                },
+                                                elements: {
+                                                        arc: {
+                                                                borderWidth: 0
+                                                        }
+                                                }
+                                        }
+                                });
+                                return;
+                        }
+
+                        // Group expenses by description and calculate totals
+                        const expenseGroups = {};
+                        let totalExpenses = 0;
+
+                        expenseTransactions.forEach(tx => {
+                                const amount = Number(tx.amount) || 0;
+                                totalExpenses += amount;
+
+                                if (expenseGroups[tx.description]) {
+                                        expenseGroups[tx.description] += amount;
+                                } else {
+                                        expenseGroups[tx.description] = amount;
+                                }
+                        });
+
+                        // Filter out zero amounts and sort by amount (descending)
+                        const sortedExpenses = Object.entries(expenseGroups)
+                                .filter(([_, amount]) => amount > 0)
+                                .sort(([, a], [, b]) => b - a);
+
+                        if (sortedExpenses.length === 0) {
+                                // Fallback to empty state
+                                updateChart();
+                                return;
+                        }
+
+                        const labels = sortedExpenses.map(([description, _]) => description);
+                        const data = sortedExpenses.map(([_, amount]) => amount);
+
+                        const colors = [
+                                '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6',
+                                '#ec4899', '#14b8a6', '#f97316', '#84cc16', '#6366f1',
+                                '#f43f5e', '#06b6d4', '#8b5a2b', '#7c3aed', '#db2777'
+                        ];
+
+                        expenseChart = new Chart(ctx, {
+                                type: 'doughnut',
+                                data: {
+                                        labels: labels,
+                                        datasets: [{
+                                                data: data,
+                                                backgroundColor: colors.slice(0, labels.length),
+                                                borderWidth: 2,
+                                                borderColor: '#1e293b',
+                                                hoverBorderWidth: 3,
+                                                hoverBorderColor: '#f8fafc'
+                                        }]
+                                },
+                                options: {
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        cutout: '60%',
+                                        plugins: {
+                                                legend: {
+                                                        display: true,
+                                                        position: 'bottom',
+                                                        labels: {
+                                                                color: '#cbd5e1',
+                                                                padding: 15,
+                                                                usePointStyle: true,
+                                                                pointStyle: 'circle',
+                                                                font: {
+                                                                        size: 11
+                                                                },
+                                                                generateLabels: function (chart) {
+                                                                        const data = chart.data;
+                                                                        if (data.labels.length && data.datasets.length) {
+                                                                                return data.labels.map((label, i) => {
+                                                                                        const dataset = data.datasets[0];
+                                                                                        const amount = dataset.data[i];
+                                                                                        const percentage = ((amount / totalExpenses) * 100).toFixed(1);
+                                                                                        return {
+                                                                                                text: `${label}: ₱${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${percentage}%)`,
+                                                                                                fillStyle: dataset.backgroundColor[i],
+                                                                                                strokeStyle: dataset.borderColor,
+                                                                                                lineWidth: dataset.borderWidth,
+                                                                                                hidden: false,
+                                                                                                index: i
+                                                                                        };
+                                                                                });
+                                                                        }
+                                                                        return [];
+                                                                }
+                                                        }
+                                                },
+                                                tooltip: {
+                                                        backgroundColor: '#1e293b',
+                                                        titleColor: '#f8fafc',
+                                                        bodyColor: '#cbd5e1',
+                                                        borderColor: '#475569',
+                                                        borderWidth: 1,
+                                                        cornerRadius: 8,
+                                                        displayColors: true,
+                                                        callbacks: {
+                                                                label: function (context) {
+                                                                        const amount = context.parsed;
+                                                                        const percentage = ((amount / totalExpenses) * 100).toFixed(1);
+                                                                        return `₱${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${percentage}%)`;
+                                                                }
+                                                        }
+                                                }
+                                        },
+                                        elements: {
+                                                arc: {
+                                                        borderWidth: 2
+                                                }
+                                        },
+                                        animation: {
+                                                animateScale: true,
+                                                animateRotate: true,
+                                                duration: 1000
+                                        }
+                                }
+                        });
+                }
+
+                function renderTransactions() {
+                        const list = document.getElementById('transactionsList');
+
+                        if (transactionsData.length === 0) {
+                                list.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-receipt"></i>
+            <p>No transactions found. Add your first transaction to get started!</p>
+          </div>
+        `;
+                                return;
+                        }
+
+                        list.innerHTML = '';
+
+                        // Sort transactions by date (newest first)
+                        const sortedTransactions = [...transactionsData].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                        sortedTransactions.forEach(tx => {
+                                const div = document.createElement('div');
+                                div.className = 'transaction-item';
+
+                                const amountNum = Number(tx.amount);
+                                const formattedAmount = isNaN(amountNum) ? '0.00' : amountNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                                div.innerHTML = `
+          <div class="transaction-info">
+            <div class="transaction-description">${tx.description}</div>
+            <div class="transaction-meta">
+              ${new Date(tx.date).toLocaleDateString()} • ${tx.type}
+            </div>
+          </div>
+          <div class="transaction-amount ${tx.type}">
+            ${tx.type === 'income' ? '+' : '-'}₱${formattedAmount}
+          </div>
+          <button class="btn-delete" onclick="deleteTransaction('${tx.id}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        `;
+
+                                list.appendChild(div);
+                        });
+                }
+
+                function fetchTransactions() {
+                        axios.get(`${API_BASE}/transactions/${userId}`)
+                                .then(res => {
+                                        transactionsData = res.data;
+                                        updateStats();
+                                        updateChart();
+                                        renderTransactions();
+                                })
+                                .catch(err => {
+                                        console.error('Error loading transactions:', err);
+                                        Swal.fire({
+                                                icon: 'error',
+                                                title: 'Error!',
+                                                text: 'Error loading transactions: ' + err.message
+                                        });
+                                        transactionsData = [];
+                                        updateStats();
+                                        updateChart();
+                                        renderTransactions();
+                                });
+                }
+
+                function deleteTransaction(id) {
+                        Swal.fire({
+                                title: 'Are you sure?',
+                                text: "You won't be able to revert this!",
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'Yes, delete it!',
+                                cancelButtonText: 'Cancel'
+                        }).then((result) => {
+                                if (result.isConfirmed) {
+                                        axios.delete(`${API_BASE}/transactions/${id}`)
+                                                .then(() => {
+                                                        Swal.fire({
+                                                                icon: 'success',
+                                                                title: 'Deleted!',
+                                                                text: 'Transaction has been deleted.',
+                                                                timer: 1500,
+                                                                showConfirmButton: false
+                                                        });
+                                                        fetchTransactions();
+                                                })
+                                                .catch(err => {
+                                                        console.error('Error deleting transaction:', err);
+                                                        Swal.fire({
+                                                                icon: 'error',
+                                                                title: 'Error!',
+                                                                text: 'Error deleting transaction: ' + err.message
+                                                        });
+                                                });
+                                }
+                        });
+                }
+
+                document.getElementById('addTransactionForm').onsubmit = e => {
+                        e.preventDefault();
+
+                        const description = document.getElementById('description').value.trim();
+                        const amount = parseFloat(document.getElementById('amount').value);
+                        const type = document.getElementById('type').value;
+
+                        axios.post(`${API_BASE}/transactions`, {
+                                user_id: userId,
+                                description,
+                                amount,
+                                type
+                        })
+                                .then(() => {
+                                        Swal.fire({
+                                                icon: 'success',
+                                                title: 'Success!',
+                                                text: 'Transaction added successfully!',
+                                                timer: 1500,
+                                                showConfirmButton: false
+                                        });
+                                        e.target.reset();
+                                        fetchTransactions();
+                                })
+                                .catch(err => {
+                                        console.error('Error adding transaction:', err);
+                                        Swal.fire({
+                                                icon: 'error',
+                                                title: 'Error!',
+                                                text: 'Error adding transaction: ' + err.message
+                                        });
+                                });
+                };
+
+                // Initialize dashboard
+                fetchTransactions();
+        </script>
+</body>
+
+</html>
